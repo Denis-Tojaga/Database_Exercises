@@ -1,1 +1,1 @@
-# Database_Exerices
+# Database_Exercises
