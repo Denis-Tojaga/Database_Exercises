@@ -284,26 +284,18 @@ exec proc_tip @prebrojano = 30
 
 --9) Zadatak
 
---pomocni view za grupisanje svih jedinstvenih prezimena
+--podupit sluzi kao tabela samo jedinstvenih prezimena
+--prebrojimo koliko tu ima zapisa
 go
-create view view_pomocni
-as
-select distinct prezime
-from osoba
-
-
-
---procedura koja prebroji zapise iz pomocnog pogleda
-go
-create procedure proc_prez
+create procedure proc_prezime
 as
 begin
-	select COUNT(*) as broj_jedinstvenih_prezimena
-	from view_pomocni
+	select COUNT(podtab.prezime) as broj_jedinstvenih_prezimena 
+	from (select distinct prezime from osoba) as podtab
 end
 
 
-exec proc_prez
+exec proc_prezime
 
 
 
