@@ -1,13 +1,29 @@
---1) Zadatak
---a)
-create database ispit_24_07_2020
+--1
+/*
+a) Kreirati bazu podataka pod vlastitim brojem indeksa.
+*/
+
+create database privremena
 go
 
-use ispit_24_07_2020
+use privremena
 go
 
 
---b)
+
+
+
+/*
+--Prilikom kreiranja tabela voditi racuna o medjusobnom odnosu izmedju tabela.
+
+a) Kreirati tabelu radnik koja ce imati sljedecu strukturu:
+	-radnikID, cjelobrojna varijabla, primarni kljuc
+	-drzavaID, 15 unicode karaktera
+	-loginID, 256 unicode karaktera
+	-god_rod, cjelobrojna varijabla
+	-spol, 1 unicode karakter
+*/
+	
 create table radnik
 (
 	radnikID int constraint PK_radnikID primary key,
@@ -18,10 +34,22 @@ create table radnik
 )
 
 
-create table nabavka 
+
+
+/*
+b) Kreirati tabelu nabavka koja ce imati sljedecu strukturu:
+	-nabavkaID, cjelobrojna varijabla, primarni kljuc
+	-status, cjelobrojna varijabla
+	-radnikID, cjelobrojna varijabla
+	-br_racuna, 15 unicode karaktera
+	-naziv_dobavljaca, 50 unicode karaktera
+	-kred_rejting, cjelobrojna varijabla
+*/
+
+create table nabavka
 (
 	nabavkaID int constraint PK_nabavkaID primary key,
-	status int, 
+	status int,
 	radnikID int constraint FK_radnikID foreign key(radnikID) references radnik(radnikID),
 	br_racuna nvarchar(15),
 	naziv_dobavljaca nvarchar(50),
@@ -29,6 +57,18 @@ create table nabavka
 )
 
 
+
+
+/*
+c) Kreirati tabelu prodaja koja ce imati sljedecu strukturu:
+	-prodajaID, cjelobrojna varijabla, primarni kljuc, inkrementalno punjenje sa pocetnom vrijednoscu 1, samo neparni brojevi
+	-prodavacID, cjelobrojna varijabla
+	-dtm_isporuke, datumsko-vremenska varijabla
+	-vrij_poreza, novcana varijabla
+	-ukup_vrij, novcana varijabla
+	-online_narudzba, bit varijabla sa ogranicenjem kojim se mogu unijeti samo cifre 0 i 1
+
+*/
 
 create table prodaja
 (
@@ -44,18 +84,44 @@ create table prodaja
 
 
 
---2) Zadatak
 
---a)
+/*
+--2
+Import podataka
+
+a) Iz tabele Employee iz šeme HumanResources baze AdventureWorks2017 u tabelu radnik importovati podatke
+ po sljedecem pravilu:
+	-BusinessEntityID -> radnikID
+	-NationalIDNumber -> drzavaID
+	-LoginID -> loginID
+	-godina iz kolone BirthDate -> god_rod
+	-Gender -> spol
+*/
+
 insert into radnik
 select BusinessEntityID,
 	   NationalIDNumber,
 	   LoginID,
-	   YEAR(BirthDate),
+	   YEAR(BirthDate) as god_rod,
 	   Gender
 from AdventureWorks2017.HumanResources.Employee
 
---b)
+
+
+
+
+
+/*
+b) Iz tabela PurchaseOrderHeader i Vendor šeme Purchasing baze AdventureWorks2017 u tabelu nabavka
+	importovati podatke po sljedecem pravilu:
+	-PurchaseOrderID -> dobavljanjeID
+	-Status -> status
+	-EmployeeID -> radnikID
+	-AccountNumber -> br_racuna
+	-Name -> naziv_dobavljaca
+	-CreditRating -> kred_rejting
+*/
+
 insert into nabavka
 select poh.PurchaseOrderID,
 	   poh.Status,
@@ -63,12 +129,24 @@ select poh.PurchaseOrderID,
 	   v.AccountNumber,
 	   v.Name,
 	   v.CreditRating
-from AdventureWorks2017.Purchasing.PurchaseOrderHeader as poh 
+from AdventureWorks2017.Purchasing.PurchaseOrderHeader as poh
 inner join AdventureWorks2017.Purchasing.Vendor as v on poh.VendorID = v.BusinessEntityID
 
 
 
---c)
+
+
+
+/*
+c) Iz tabele SalesOrderHeader šeme Sales baze AdventureWorks2017 u tabelu prodaja
+	importovati podatke po sljedecem pravilu:
+	-SalesPersonID -> prodavacID
+	-ShipDate -> dtm_isporuke
+	-TaxAmt -> vrij_poreza
+	-TotalDue -> ukup_vrij
+	-OnlineOrderFlag -> online_narudzba
+*/
+
 insert into prodaja
 select SalesPersonID,
 	   ShipDate,
@@ -82,135 +160,195 @@ from AdventureWorks2017.Sales.SalesOrderHeader
 
 
 
+/*
+--3
+a) U tabelu radnik dodati kolonu st_kat (starosna kategorija), tipa 3 karaktera.
+*/
 
---3) Zadatak
-
---a)
 alter table radnik
 add st_kat nvarchar(3)
-
---b)
-update radnik
-set st_kat = case
-				 when YEAR(GETDATE()) - god_rod <=30 then 'I'
-				 when YEAR(GETDATE()) - god_rod between 31 and 49 then 'II'
-				 else 'III'
-			 end
 
 select * from radnik
 
 
---c)
+
+/*
+
+b) Prethodno kreiranu kolonu popuniti po principu:
+	starosna kategorija			uslov
+	I							osobe do 30 godina starosti (ukljucuje se i 30)
+	II							osobe od 31 do 49 godina starosti
+	III							osobe preko 50 godina starosti
+*/
+
+update radnik
+set st_kat = case when YEAR(getdate()) - god_rod <= 30 then 'I'
+				  when YEAR(getdate()) - god_rod between 31 and 49 then 'II'
+				  when YEAR(getdate()) - god_rod >= 50 then 'III'
+				  end
+
+select * from radnik
+
+
+
+
+/*
+
+c) Neka osoba sa navrsenih 65 godina odlazi u penziju.
+Prebrojati koliko radnika ima 10 ili manje godina do penzije.
+Rezultat upita iskljucivo treba biti poruka:
+'Broj radnika koji imaju 10 ili manje godina do penzije je' nakon cega slijedi prebrojani broj.
+Nece se priznati rjesenje koje kao rezultat upita vraca vise kolona.
+*/
+
 select 'Broj radnika koji imaju 10 ili manje godina do penzije je ' + CONVERT(nvarchar,COUNT(*)) as poruka
-from radnik
-where 65 - (YEAR(GETDATE()) - god_rod) between 1 and 10
+from (select *
+	  from radnik
+	  where 65 - (YEAR(getdate()) - god_rod) between 1 and 10) as podTab
 
 
 
 
 
+/*
+--4
+a) U tabeli prodaja kreirati kolonu stopa_poreza (10 unicode karaktera)
+*/
 
-
-
-
-
-
---4) Zadatak
-
---a)
 alter table prodaja
 add stopa_poreza nvarchar(10)
-
---b)
-update prodaja
-set stopa_poreza = convert(nvarchar,vrij_poreza/ukup_vrij) + '%'
 
 select * from prodaja
 
 
 
 
+/*
+b) Prethodno kreiranu kolonu popuniti kao kolicnik vrij_poreza i ukup_vrij.
+Stopu poreza izraziti kao cijeli broj s oznakom %,
+ pri cemu je potrebno da izmedju brojcane vrijednosti i znaka % bude prazno mjesto.
+(Npr: 14.00 %)
+*/
+
+update prodaja
+set stopa_poreza = Convert(nvarchar,(vrij_poreza / ukup_vrij )* 100) + ' %'
+
+select * from prodaja
 
 
 
---5) Zadatak
+/*
+--5
+a) Koristeci tabelu nabavka kreirati pogled view_slova sljedece strukture:
+	-slova
+	-prebrojano, prebrojani broj pojavljivanja slovnih dijelova podatka u koloni br_racuna.
+*/
 
---a)
---grupisati po slovnom dijelu kolone i po tome prebrojati koliko se pojavljuje zapisa
 go
 create view view_slova
 as
-select LEFT(br_racuna, len(br_racuna) - 4) as broj_slova,
-	   count(*) as prebrojano_zapisa
+select len(LEFT(br_racuna,len(br_racuna) - 4)) as slova,
+	   COUNT(*) as prebrojano
 from nabavka
-group by LEFT(br_racuna, len(br_racuna) - 4)
+group by len(LEFT(br_racuna,len(br_racuna) - 4))
 
 
---b)
-select broj_slova,prebrojano_zapisa, prebrojano_zapisa - (select AVG(prebrojano_zapisa) from view_slova) as razlika
+select * from view_slova
+
+
+/*
+b) Koristeci pogled view_slova odrediti razliku vrijednosti izmedju prebrojanih i srednje vrijednosti kolone.
+Rezultat treba da sadrzi kolone slova, prebrojano i razliku.
+Sortirati u rastucem redoslijedu prema razlici.
+*/
+
+select *,prebrojano - (select AVG(prebrojano) from view_slova) as razlika
 from view_slova
 order by 3
 
 
 
 
-
-
-
-
-
---6) Zadatak
---a)
+/*
+--6
+a) Koristeci tabelu prodaja kreirati pogled view_stopa sljedece strukture:
+	-prodajaID
+	-stopa_poreza
+	-stopa_num, u kojoj ce biti numericka vrijednost stope poreza
+*/
 go
 create view view_stopa
 as
-select prodajaID,stopa_poreza,convert(float,left(stopa_poreza,len(stopa_poreza) - 1)) as stopa_num
+select prodajaID,
+	   stopa_poreza,
+	   convert(real,left(stopa_poreza,len(stopa_poreza)-1)) as stopa_num
 from prodaja
 
 
---b)
-select 'manji', stopa_num - (select AVG(stopa_num)  from view_stopa) as razlika
+
+
+
+/*
+b) Koristeci pogled view_stopa, 
+a na osnovu razlike izmedju vrijednosti u koloni stopa_num i srednje vrijednosti stopa poreza
+za svaki proizvodID navesti poruku 'manji', odnosno, 'veci'.
+*/
+
+
+--koristimo union all da se ukljuce i duplikati
+select 'manji',ROUND(stopa_num - (select AVG(stopa_num) from view_stopa),2) as razlika
 from view_stopa
-where stopa_num - (select AVG(stopa_num)  from view_stopa) < (select AVG(stopa_num)  from view_stopa)
-union
-select 'veci', stopa_num - (select AVG(stopa_num)  from view_stopa) as razlika
+where stopa_num - (select AVG(stopa_num) from view_stopa) < (select AVG(stopa_num) from view_stopa)
+union all
+select 'veci',ROUND(stopa_num - (select AVG(stopa_num) from view_stopa),2) as razlika
 from view_stopa
-where stopa_num - (select AVG(stopa_num)  from view_stopa) > (select AVG(stopa_num)  from view_stopa)
+where stopa_num - (select AVG(stopa_num) from view_stopa) > (select AVG(stopa_num) from view_stopa)
+
+--drugi nacin rjesenja
+select *,
+	  case
+		  when stopa_num - (select AVG(stopa_num) from view_stopa) < (select AVG(stopa_num) from view_stopa) then 'manji'
+		  when stopa_num - (select AVG(stopa_num) from view_stopa) > (select AVG(stopa_num) from view_stopa) then 'veci'
+		  end
+from view_stopa
 
 
 
 
 
 
+/*
+--7 
+Koristeci pogled view_stopa_poreza kreirati proceduru proc_stopa_poreza tako da je
+ prilikom izvrsavanja moguce unijeti bilo koji broj
+parametara (mozemo ostaviti bilo koji parametar bez unijete vrijednosti), 
+pri cemu ce se prebrojati broj zapisa po stopi poreza uz 
+uslov da se dohvate samo oni zapisi u kojima je stopa poreza veca od 10%.
+Proceduru pokrenuti za sljedece vrijednosti:
+	-stopa poreza = 12, 15 i 21
+*/
 
 
-
-
-
---7)
+--postavka zadatka nema nekog prevelikog smisla :/
 go
-create procedure proc_stopa_poreza
+alter procedure pro_stopa_poreza
 (
 	@prodajaID int = null,
 	@stopa_poreza nvarchar(10) = null,
-	@stopa_num float = null
+	@stopa_num real = null
 )
 as
 begin
-	select stopa_poreza,COUNT(*)
+	select stopa_poreza,COUNT(*) 
 	from view_stopa
-	where prodajaID = @prodajaID or
-		  stopa_poreza = @stopa_poreza or
-		  (stopa_num = @stopa_num and stopa_num > 10)
+	where (prodajaID = @prodajaID or left(stopa_poreza,charindex('.',stopa_poreza) - 1) = @stopa_poreza or stopa_num = @stopa_num) 
+		  and convert(int,left(stopa_poreza,charindex('.',stopa_poreza) - 1)) > 10
 	group by stopa_poreza
 end
 
-
-
-exec proc_stopa_poreza 1;
-exec proc_stopa_poreza 15;
-exec proc_stopa_poreza 21;
-
+exec pro_stopa_poreza @stopa_poreza = 12;
+exec pro_stopa_poreza @stopa_poreza = 15;
+exec pro_stopa_poreza @stopa_poreza = 21;
 
 
 
@@ -220,18 +358,19 @@ exec proc_stopa_poreza 21;
 
 
 
---8) Zadatak
-
---prvo izmjena tipa podatka kolone online_narudzba da bi mogli staviti YES ili NO
-alter table prodaja
-alter column online_narudzba nvarchar(3)
-
+/*
+--8
+Kreirati proceduru proc_prodaja kojom ce se izvrsiti promjena vrijednosti u koloni online_narudzba tabele prodaja.
+Promjena ce se vrsiti tako sto ce se 0 zamijeniti sa NO, a 1 sa YES.
+Pokrenuti proceduru kako bi se izvrsile promjene, a nakon toga onemoguciti da se u koloni unosi bilo kakva druga vrijednost
+ osim NO ili YES.
+*/
 
 go
 create procedure proc_prodaja
 as
 begin
-
+	
 	alter table prodaja
 	alter column online_narudzba nvarchar(3)
 
@@ -239,19 +378,19 @@ begin
 	set online_narudzba = case 
 							  when online_narudzba = 0 then 'NO'
 							  when online_narudzba = 1 then 'YES'
-						  end
+							  end
 end
 
 exec proc_prodaja;
-
-
---svaki check expression mora biti u zagradama
-alter table prodaja
-add constraint CK_online_narudzba check (online_narudzba = 'YES' or online_narudzba = 'NO')
-
-
 select * from prodaja
 
+alter table prodaja
+add constraint CK_online_narudzba check (online_narudzba = 'NO' or online_narudzba='YES')
+
+--testiranje
+update prodaja
+set online_narudzba = 'eee'
+where prodajaID = 1
 
 
 
@@ -260,60 +399,49 @@ select * from prodaja
 
 
 
+/*
+
+--9
+a) Nad kolonom god_rod tabele radnik kreirati ogranicenje kojim ce se onemoguciti unos bilo koje godine iz buducnosti
+ kao godina rodjenja.
+Testirati funkcionalnost kreiranog ogranicenja navodjenjem koda za insert podataka kojim ce se kao godina rodjenja 
+pokusati unijeti bilo koja godina iz buducnosti.
+*/
 
 
-
-
-
-
-
-
-
-
-
-
-
-
---9) Zadatak
-
---a)
---uslov je da je god_rod manja od godine trenutnog datuma
 alter table radnik
-add constraint CK_god_rod_2 check (god_rod < YEAR(GETDATE()))
+add constraint CK_god_rod check(god_rod<=YEAR(getdate()))
 
-
---testiranje constrainta
-insert into radnik
-values (20000, 'A', 'A', 2500, 'M', 'I');
-
-
-
-
-
-
-
---b)
-
---prvo postaviti da svi podaci budu 7 karaktera ili manji
+--testiranje
 update radnik
-set drzavaID = left(drzavaID,7)
+set god_rod = 2025
+where radnikID = 1
 
---i nakon toga kreirati ogranicenje(ogranicenje provjeri i postojece i nove koje dodajemo podatke)
+
+/*
+b) Nad kolonom drzavaID tabele radnik kreirati ogranicenje kojim ce se ograniciti duzina podatka na 7 znakova.
+Ako je prethodno potrebno, izvrsiti prilagodbu kolone, 
+pri cemu nije dozvoljeno prilagodjavati podatke cija duzina iznosi 7 ili manje znakova.
+Testirati funkcionalnost kreiranog ogranicenja 
+navodjenjem koda za insert podataka kojim ce se u drzavaID pokusati unijeti podatak duzi 
+od 7 znakova.
+*/
+
+update radnik
+set drzavaID = LEFT(drzavaID,7)
+where LEN(drzavaID) > 7
+
 alter table radnik
-add constraint CK_drzavaID check (len(drzavaID)  <= 7)
+add constraint CK_drzava_ID check (len(drzavaID) <= 7)
+
+--testiranje
+update radnik
+set drzavaID = 29584720
+where radnikID = 1
 
 
---testiranje constrainta
-INSERT INTO radnik
-VALUES (20000, '12345678', 'A', 1980, 'M', 'I');
-
-
-
-
---10) NIJE RADJEN OVE GODINE
-
-
-
-
-
-
+/*
+--10
+Kreirati backup baze na default lokaciju, obrisati bazu a zatim izvrsiti restore baze. 
+Uslov prihvatanja koda je da se moze izvrsiti.
+--NIJE RADJEN OVE GODINE
