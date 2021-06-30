@@ -1,1 +1,1 @@
-# Database_Exercises
+# All database exercises on Faculty of Information Technologies
