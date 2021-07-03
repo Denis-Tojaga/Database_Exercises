@@ -1,2 +1,2 @@
 # All database exercises on Faculty of Information Technologies
-## MS SQL 
+# MS SQL is used for all exercises
